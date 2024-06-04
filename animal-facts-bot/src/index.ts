@@ -1,6 +1,6 @@
-import { HandleRequest, HttpRequest, HttpResponse } from "@fermyon/spin-sdk"
+import { HandleRequest, HttpRequest, HttpResponse, Kv } from "@fermyon/spin-sdk"
 
-let decoder = new TextDecoder();
+const decoder = new TextDecoder();
 
 type SlackCommand = {
     token?: string | null;
@@ -42,35 +42,59 @@ export const handleRequest: HandleRequest = async function(request: HttpRequest)
     };
     console.log(`Got a query for ${command.text}`);
 
-    if (command.text != null) {
-        let diet = await OutBoundCall(command.text);
-        if (!diet) {
-            return {
-                status: 401,
-                headers: { "content-type": "text/plain" },
-                body: "Animal not found"
-            };
-        };
-        return {
-            status: 200,
-            headers: { "content-type": "text/plain" },
-            body: `The diet for ${command.text} is ${diet}`
-        };
-    } else {
+    if (command.text == null) {
         return {
             status: 200,
             headers: { "content-type": "text/plain" },
             body: "You're not Slack!!!"
         };
     };
-}
+
+    var description: string | null = CheckCache(command.text);
+    if (!description) {
+        description = await OutBoundCall(command.text);
+        if (!description) {
+            return {
+                status: 401,
+                headers: { "content-type": "text/plain" },
+                body: "Animal not found"
+            };
+        };
+    };
+
+    return {
+        status: 200,
+        headers: { "content-type": "text/plain" },
+        body: description
+    };
+};
 
 const OutBoundCall = async function(query: string): Promise<string | null> {
     const animalFactResponse = await fetch(`https://freetestapi.com/api/v1/animals?search=${query}`);
     const animalFact = await animalFactResponse.json() as AnimalFact[];
     if (animalFact.length > 0) {
-        return animalFact[0].diet;
+        StoreInCache(query, animalFact[0].description);
+        return animalFact[0].description;
     } else {
+        StoreInCache(query, "Aminal not found!");
         return null;
     }
+};
+
+const CheckCache = function(query: string): string | null {
+    let store = Kv.openDefault();
+    let cachedValue = decoder.decode(store.get(query) || new Uint8Array());
+    if (cachedValue) {
+        console.log("Cache hit!");
+        return cachedValue
+    } else {
+        console.log("Cache miss");
+        return null
+    }
+};
+
+const StoreInCache = function(query: string, description: string | null) {
+    let store = Kv.openDefault();
+    store.setJson(query, description);
+    console.log("Stored in cache");
 };
