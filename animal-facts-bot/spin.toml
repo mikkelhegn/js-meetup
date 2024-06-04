@@ -13,7 +13,7 @@ component = "animal-facts-bot"
 [component.animal-facts-bot]
 source = "target/animal-facts-bot.wasm"
 exclude_files = ["**/node_modules"]
-allowed_outbound_hosts = []
+allowed_outbound_hosts = ["https://freetestapi.com"]
 
 [component.animal-facts-bot.build]
 command = "npm run build"
