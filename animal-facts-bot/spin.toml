@@ -1,0 +1,20 @@
+spin_manifest_version = 2
+
+[application]
+authors = ["Mikkel Mørk Hegnhøj <mikkel@fermyon.com>"]
+description = ""
+name = "animal-facts-bot"
+version = "0.1.0"
+
+[[trigger.http]]
+route = "/..."
+component = "animal-facts-bot"
+
+[component.animal-facts-bot]
+source = "target/animal-facts-bot.wasm"
+exclude_files = ["**/node_modules"]
+allowed_outbound_hosts = []
+
+[component.animal-facts-bot.build]
+command = "npm run build"
+watch = ["src/**/*.ts", "package.json"]
